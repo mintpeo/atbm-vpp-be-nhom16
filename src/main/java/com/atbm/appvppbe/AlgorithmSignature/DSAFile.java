@@ -1,11 +1,11 @@
-package com.atbm.appvppbe.DSASignature;
+package com.atbm.appvppbe.AlgorithmSignature;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.security.*;
 
-public class DSA {
+public class DSAFile {
     public static void main(String[] args) throws Exception {
         KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DSA", "SUN"); // key DSA
         SecureRandom random = SecureRandom.getInstance("SHA1PRNG", "SUN");
