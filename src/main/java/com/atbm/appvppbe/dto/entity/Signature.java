@@ -13,7 +13,7 @@ public class Signature {
 
     @OneToOne
     @JoinColumn(name = "order_id")
-    private Order orderId;
+    private Order order;
 
     @Column(name = "signature")
     private String signature;

@@ -13,13 +13,21 @@ public class DSA {
         return keyGen.generateKeyPair();
     }
 
-    public String process(String text) throws Exception {
-        KeyPair pair = createSignature();
-        PublicKey pub = pair.getPublic();
-        PrivateKey priv = pair.getPrivate();
+    public String exportKey(KeyPair keyPair, boolean isPublicKey) {
+        byte[] export;
+        if (isPublicKey) {
+            export = keyPair.getPublic().getEncoded();
+        } else {
+            export = keyPair.getPrivate().getEncoded();
+        }
+        return Base64.getEncoder().encodeToString(export);
+    }
+
+    public String process(String text, KeyPair keyPair) throws Exception {
+        PrivateKey pri = keyPair.getPrivate();
 
         Signature dsa = Signature.getInstance("SHA1withDSA", "SUN");
-        dsa.initSign(priv);
+        dsa.initSign(pri);
 
         // Start signature
         byte[] data = text.getBytes(StandardCharsets.UTF_8);
@@ -31,6 +39,6 @@ public class DSA {
     public static void main(String[] args) throws Exception {
         String text = "orderId=1,total=500000,userId=10";
         DSA dsa = new DSA();
-        System.out.println(dsa.process(text));
+//        System.out.println(dsa.process(text));
     }
 }
