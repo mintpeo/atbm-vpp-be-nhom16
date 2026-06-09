@@ -19,4 +19,7 @@ public class User {
 
     @Column(name = "name")
     private String name;
+
+    @Column(columnDefinition = "TEXT")
+    private String publicKey;
 }
