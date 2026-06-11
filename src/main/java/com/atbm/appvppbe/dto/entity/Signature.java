@@ -15,9 +15,6 @@ public class Signature {
     @JoinColumn(name = "order_id")
     private Order order;
 
-    @Column(name = "signature")
+    @Column(name = "signature", columnDefinition = "TEXT")
     private String signature;
-
-    @Column(name = "public_key")
-    private String publicKey;
 }

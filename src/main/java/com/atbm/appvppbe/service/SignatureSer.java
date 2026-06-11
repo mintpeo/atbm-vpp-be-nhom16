@@ -2,49 +2,75 @@ package com.atbm.appvppbe.service;
 
 import com.atbm.appvppbe.AlgorithmSignature.DSA.DSA;
 import com.atbm.appvppbe.dto.entity.Order;
+import com.atbm.appvppbe.dto.entity.User;
 import com.atbm.appvppbe.dto.request.OrderReq;
+import com.atbm.appvppbe.dto.request.SignReq;
+import com.atbm.appvppbe.dto.request.VerifySignReq;
 import com.atbm.appvppbe.repository.OrderRep;
 import com.atbm.appvppbe.repository.SignatureRep;
 import com.atbm.appvppbe.dto.entity.Signature;
+import com.atbm.appvppbe.repository.UserRep;
 import lombok.RequiredArgsConstructor;
-import org.springframework.mail.MailSender;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
-
-import java.security.KeyPair;
 
 @Service
 @RequiredArgsConstructor
 public class SignatureSer {
     private final SignatureRep rep;
     private final OrderRep orderRep;
-    private final OrderSer orderSer;
+    private final UserRep userRep;
     private final ObjectMapper objectMapper;
 
-    // 1 user 1 cap public, private
-    public void saveSignature(OrderReq req) throws Exception {
-        // signature success => save database
-        // Object => Json Text (Dang sai)
-        String orderText = objectMapper.writeValueAsString(req);
+    // Verify
+    public boolean verify(VerifySignReq req) throws Exception {
+        Order order = orderRep.findById(req.getOrderId()).orElse(null);
+        if (order == null) return false;
 
-        // Create KeyPair
+        User user = userRep.findById(order.getUser().getId()).orElse(null);
+        if (user == null) return false;
+
+        Signature signature = rep.findByOrderId(order.getId()).orElse(null);
+        if (signature == null) return false;
+
+        SignReq signReq = new SignReq();
+        signReq.setOrderId(order.getId());
+        signReq.setUserId(order.getUser().getId());
+        signReq.setTotalPrice(order.getTotalPrice());
+
+        String data = objectMapper.writeValueAsString(signReq);
         DSA dsa = new DSA();
-        KeyPair keyPair = dsa.createSignature();
-        String signature = dsa.process(orderText, keyPair); // Signature
+        return dsa.verify(user.getPublicKey(), data, signature.getSignature());
+    }
 
-        // Export Key
-        String exportPublicKey = dsa.exportKey(keyPair, true);
-        String exportPrivateKey = dsa.exportKey(keyPair, false);
+    // Signature
+    public void saveSignature(OrderReq req) throws Exception {
+        // Check User
+        User user = userRep.findById(req.getUserId()).orElse(null);
 
+        // signature success => save database
         // Save on database
         // Order
-        Order order = orderSer.saveOrder(req);
+        Order saveOrder = new Order();
+        saveOrder.setUser(user);
+        saveOrder.setTotalPrice(req.getTotalPrice());
+        Order order = orderRep.save(saveOrder);
+
+        SignReq signReq = new SignReq();
+        signReq.setOrderId(order.getId());
+        signReq.setUserId(order.getUser().getId());
+        signReq.setTotalPrice(order.getTotalPrice());
+
+        // Object => Json Text
+        String orderText = objectMapper.writeValueAsString(signReq);
+
         // Signature
+        DSA dsa = new DSA();
+        String signature = dsa.sign(orderText, req.getPrivateKey());
+
         Signature saveSignature = new Signature();
         saveSignature.setOrder(order);
         saveSignature.setSignature(signature);
-        saveSignature.setPublicKey(exportPublicKey);
         rep.save(saveSignature);
     }
 }
