@@ -20,6 +20,6 @@ public class User {
     @Column(name = "name")
     private String name;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "public_key", columnDefinition = "TEXT")
     private String publicKey;
 }
