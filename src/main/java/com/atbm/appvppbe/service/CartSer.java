@@ -11,6 +11,7 @@ import com.atbm.appvppbe.repository.UserRep;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -19,6 +20,16 @@ public class CartSer {
     private final CartRep rep;
     private final CartItemRep cartItemRep;
     private final UserRep userRep;
+
+    // Show cart item with id
+    public List<CartItem> showSelected(long[] selectedItems) {
+        List<CartItem> list = new ArrayList<>();
+        for (long i : selectedItems) {
+            CartItem cartItem = cartItemRep.findById(i).orElse(null);
+            list.add(cartItem);
+        }
+        return list;
+    }
 
     // Check user have cart?
     private Cart checkUserCart(long userId) {
