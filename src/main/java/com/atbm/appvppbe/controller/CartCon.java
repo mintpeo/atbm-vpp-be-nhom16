@@ -16,6 +16,11 @@ import java.util.List;
 public class CartCon {
     private final CartSer ser;
 
+    @PostMapping("/showSelected")
+    public List<CartItem> showSelected(@RequestBody long[] selectedItems) {
+        return ser.showSelected(selectedItems);
+    }
+
     @PostMapping("/add")
     public void addToCart(@RequestBody AddToCartReq req) {
         ser.addToCart(req);
