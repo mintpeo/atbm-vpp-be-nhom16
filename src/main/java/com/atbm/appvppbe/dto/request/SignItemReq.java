@@ -3,7 +3,7 @@ package com.atbm.appvppbe.dto.request;
 import lombok.Data;
 
 @Data
-public class OrderItemReq {
+public class SignItemReq {
     private long productId;
     private int price;
     private int quantity;

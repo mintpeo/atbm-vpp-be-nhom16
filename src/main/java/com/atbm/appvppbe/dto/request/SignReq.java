@@ -9,5 +9,5 @@ public class SignReq {
     private long orderId;
     private long userId;
     private int totalPrice;
-//    private List<OrderItemReq> items;
+    private List<OrderItemReq> items;
 }
