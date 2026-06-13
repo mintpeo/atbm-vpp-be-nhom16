@@ -1,5 +1,6 @@
 package com.atbm.appvppbe.controller;
 
+import com.atbm.appvppbe.dto.request.CheckSignatureReq;
 import com.atbm.appvppbe.dto.request.OrderReq;
 import com.atbm.appvppbe.dto.request.VerifySignReq;
 import com.atbm.appvppbe.service.SignatureSer;
@@ -18,8 +19,13 @@ public class SignatureCon {
         return ser.verify(req);
     }
 
+    @PostMapping("/check")
+    public boolean checkSignature(@RequestBody CheckSignatureReq req) throws Exception {
+        return ser.checkSignature(req);
+    }
+
     @PostMapping("/sign")
-    public void saveSignature(@RequestBody OrderReq req) throws Exception {
-        ser.saveSignature(req);
+    public boolean saveSignature(@RequestBody OrderReq req) throws Exception {
+        return ser.saveSignature(req);
     }
 }

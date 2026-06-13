@@ -4,10 +4,7 @@ import com.atbm.appvppbe.AlgorithmSignature.DSA.DSA;
 import com.atbm.appvppbe.dto.entity.Order;
 import com.atbm.appvppbe.dto.entity.OrderItem;
 import com.atbm.appvppbe.dto.entity.User;
-import com.atbm.appvppbe.dto.request.OrderItemReq;
-import com.atbm.appvppbe.dto.request.OrderReq;
-import com.atbm.appvppbe.dto.request.SignReq;
-import com.atbm.appvppbe.dto.request.VerifySignReq;
+import com.atbm.appvppbe.dto.request.*;
 import com.atbm.appvppbe.repository.OrderItemRep;
 import com.atbm.appvppbe.repository.OrderRep;
 import com.atbm.appvppbe.repository.SignatureRep;
@@ -63,10 +60,65 @@ public class SignatureSer {
         return dsa.verify(user.getPublicKey(), data, signature.getSignature());
     }
 
-    // Signature
-    public void saveSignature(OrderReq req) throws Exception {
+    // Signature Again
+    public boolean checkSignature(CheckSignatureReq req) throws Exception {
         // Check User
         User user = userRep.findById(req.getUserId()).orElse(null);
+        if (user == null) return false;
+
+        // Order
+        Order order = orderRep.findById(req.getOrderId()).orElse(null);
+        if (order == null) return false;
+
+        // Order Item
+        List<OrderItem> orderItem = orderItemRep.findByOrderId(order.getId());
+        List<OrderItemReq> orderItemReqs = new ArrayList<>();
+        for (OrderItem o : orderItem) {
+            OrderItemReq orderItemReq = new OrderItemReq();
+            orderItemReq.setProductId(o.getProductId());
+            orderItemReq.setType(o.getType());
+            orderItemReq.setPrice(o.getPrice());
+            orderItemReq.setQuantity(o.getQuantity());
+
+            orderItemReqs.add(orderItemReq);
+        }
+
+        // Data to signature
+        SignReq signReq = new SignReq();
+        signReq.setOrderId(req.getOrderId());
+        signReq.setUserId(req.getUserId());
+        signReq.setTotalPrice(order.getTotalPrice());
+        signReq.setItems(orderItemReqs);
+
+        // Object => Json Text
+        String orderText = objectMapper.writeValueAsString(signReq);
+
+        // Handle Signature
+        DSA dsa = new DSA();
+        String signature = dsa.sign(orderText, req.getPrivateKey());
+
+        // Verify
+        boolean verify = dsa.verify(user.getPublicKey(), orderText, signature);
+        if (verify) {
+            // Verify => True (Order)
+            order.setVerify(true);
+            orderRep.save(order);
+
+            // Save
+            Signature saveSignature = new Signature();
+            saveSignature.setOrder(order);
+            saveSignature.setSignature(signature);
+            rep.save(saveSignature);
+            return true;
+        }
+        return false;
+    }
+
+    // Signature
+    public boolean saveSignature(OrderReq req) throws Exception {
+        // Check User
+        User user = userRep.findById(req.getUserId()).orElse(null);
+        if (user == null) return false;
 
         // signature success => save database
         // Save on database
@@ -88,22 +140,34 @@ public class SignatureSer {
             orderItemRep.save(saveOrderItem);
         }
 
+        // Data to signature
         SignReq signReq = new SignReq();
         signReq.setOrderId(order.getId());
-        signReq.setUserId(order.getUser().getId());
-        signReq.setTotalPrice(order.getTotalPrice());
+        signReq.setUserId(req.getUserId());
+        signReq.setTotalPrice(req.getTotalPrice());
         signReq.setItems(req.getItems());
 
         // Object => Json Text
         String orderText = objectMapper.writeValueAsString(signReq);
 
-        // Signature
+        // Handle Signature
         DSA dsa = new DSA();
         String signature = dsa.sign(orderText, req.getPrivateKey());
 
-        Signature saveSignature = new Signature();
-        saveSignature.setOrder(order);
-        saveSignature.setSignature(signature);
-        rep.save(saveSignature);
+        // Verify
+        boolean verify = dsa.verify(user.getPublicKey(), orderText, signature);
+        if (verify) {
+            // Verify => True (Order)
+            order.setVerify(true);
+            orderRep.save(order);
+
+            // Save
+            Signature saveSignature = new Signature();
+            saveSignature.setOrder(order);
+            saveSignature.setSignature(signature);
+            rep.save(saveSignature);
+            return true;
+        }
+        return false;
     }
 }
