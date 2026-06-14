@@ -28,7 +28,7 @@ public class DSA {
     }
 
     // String => Private Key
-    private PrivateKey importPrivateKey(String keyText) throws Exception {
+    public PrivateKey importPrivateKey(String keyText) throws Exception {
         byte[] keyBytes = Base64.getDecoder().decode(keyText);
         PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("DSA");
@@ -36,7 +36,7 @@ public class DSA {
         return keyFactory.generatePrivate(spec);
     }
 
-    private PublicKey importPublicKey(String keyText) throws Exception {
+    public PublicKey importPublicKey(String keyText) throws Exception {
         byte[] keyBytes = Base64.getDecoder().decode(keyText);
         X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("DSA");
@@ -45,11 +45,9 @@ public class DSA {
     }
 
     // Sign
-    public String sign(String text, String privateKey) throws Exception {
-        PrivateKey pri = importPrivateKey(privateKey);
-
+    public String sign(String text, PrivateKey privateKey) throws Exception {
         Signature dsa = Signature.getInstance("SHA1withDSA", "SUN");
-        dsa.initSign(pri);
+        dsa.initSign(privateKey);
 
         // Start signature
         byte[] data = text.getBytes(StandardCharsets.UTF_8);
@@ -59,9 +57,7 @@ public class DSA {
     }
 
     // Verify
-    public boolean verify(String publicKeyText, String dataText, String signatureText) throws Exception {
-        PublicKey publicKey = importPublicKey(publicKeyText);
-
+    public boolean verify(PublicKey publicKey, String dataText, String signatureText) throws Exception {
         Signature signature = Signature.getInstance("SHA1withDSA", "SUN");
         signature.initVerify(publicKey);
         signature.update(dataText.getBytes(StandardCharsets.UTF_8));

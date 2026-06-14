@@ -14,6 +14,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
+import java.io.FileInputStream;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -57,7 +62,77 @@ public class SignatureSer {
 
         String data = objectMapper.writeValueAsString(signReq);
         DSA dsa = new DSA();
-        return dsa.verify(user.getPublicKey(), data, signature.getSignature());
+        PublicKey publicKey = dsa.importPublicKey(user.getPublicKey());
+        return dsa.verify(publicKey, data, signature.getSignature());
+    }
+
+    // Signature Again With File
+    public boolean checkSignatureFile(CheckSignatureFileReq req) {
+        // Check User
+        User user = userRep.findById(req.getUserId()).orElse(null);
+        if (user == null) return false;
+
+        // Order
+        Order order = orderRep.findById(req.getOrderId()).orElse(null);
+        if (order == null) return false;
+
+        // Order Item
+        List<OrderItem> orderItem = orderItemRep.findByOrderId(order.getId());
+        List<OrderItemReq> orderItemReqs = new ArrayList<>();
+        for (OrderItem o : orderItem) {
+            OrderItemReq orderItemReq = new OrderItemReq();
+            orderItemReq.setProductId(o.getProductId());
+            orderItemReq.setType(o.getType());
+            orderItemReq.setPrice(o.getPrice());
+            orderItemReq.setQuantity(o.getQuantity());
+
+            orderItemReqs.add(orderItemReq);
+        }
+
+        try {
+            FileInputStream keyFis = new FileInputStream(req.getFile());
+            byte[] encKey = new byte[keyFis.available()];
+            keyFis.read(encKey);
+            keyFis.close();
+
+            PKCS8EncodedKeySpec privateSpec = new PKCS8EncodedKeySpec(encKey);
+            KeyFactory keyFactory = KeyFactory.getInstance("DSA", "SUN");
+            PrivateKey privateKey = keyFactory.generatePrivate(privateSpec);
+
+            // Data to signature
+            SignReq signReq = new SignReq();
+            signReq.setOrderId(req.getOrderId());
+            signReq.setUserId(req.getUserId());
+            signReq.setTotalPrice(order.getTotalPrice());
+            signReq.setItems(orderItemReqs);
+
+            // Object => Json Text
+            String orderText = objectMapper.writeValueAsString(signReq);
+
+            // Handle Signature
+            DSA dsa = new DSA();
+            PublicKey publicKey = dsa.importPublicKey(user.getPublicKey());
+            String signature = dsa.sign(orderText, privateKey);
+
+            // Verify
+            boolean verify = dsa.verify(publicKey, orderText, signature);
+            if (verify) {
+                // Verify => True (Order)
+                order.setVerify(true);
+                orderRep.save(order);
+
+                // Save
+                Signature saveSignature = new Signature();
+                saveSignature.setOrder(order);
+                saveSignature.setSignature(signature);
+                rep.save(saveSignature);
+                return true;
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        return false;
     }
 
     // Signature Again
@@ -94,24 +169,7 @@ public class SignatureSer {
         String orderText = objectMapper.writeValueAsString(signReq);
 
         // Handle Signature
-        DSA dsa = new DSA();
-        String signature = dsa.sign(orderText, req.getPrivateKey());
-
-        // Verify
-        boolean verify = dsa.verify(user.getPublicKey(), orderText, signature);
-        if (verify) {
-            // Verify => True (Order)
-            order.setVerify(true);
-            orderRep.save(order);
-
-            // Save
-            Signature saveSignature = new Signature();
-            saveSignature.setOrder(order);
-            saveSignature.setSignature(signature);
-            rep.save(saveSignature);
-            return true;
-        }
-        return false;
+        return handleSignature(req.getPrivateKey(), user.getPublicKey(), orderText, order);
     }
 
     // Signature
@@ -151,11 +209,19 @@ public class SignatureSer {
         String orderText = objectMapper.writeValueAsString(signReq);
 
         // Handle Signature
+        return handleSignature(req.getPrivateKey(), user.getPublicKey(), orderText, order);
+    }
+
+    // Handle Signature
+    private boolean handleSignature(String privateKeyReq, String publicKeyUser, String orderText, Order order) throws Exception {
+        // Handle Signature
         DSA dsa = new DSA();
-        String signature = dsa.sign(orderText, req.getPrivateKey());
+        PrivateKey privateKey = dsa.importPrivateKey(privateKeyReq);
+        PublicKey publicKey = dsa.importPublicKey(publicKeyUser);
+        String signature = dsa.sign(orderText, privateKey);
 
         // Verify
-        boolean verify = dsa.verify(user.getPublicKey(), orderText, signature);
+        boolean verify = dsa.verify(publicKey, orderText, signature);
         if (verify) {
             // Verify => True (Order)
             order.setVerify(true);

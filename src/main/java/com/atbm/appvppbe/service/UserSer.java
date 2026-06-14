@@ -3,12 +3,19 @@ package com.atbm.appvppbe.service;
 import com.atbm.appvppbe.AlgorithmSignature.DSA.DSA;
 import com.atbm.appvppbe.dto.entity.User;
 import com.atbm.appvppbe.dto.request.LoginUserReq;
+import com.atbm.appvppbe.dto.request.SendMailReq;
 import com.atbm.appvppbe.dto.request.SignUserReq;
+import com.atbm.appvppbe.dto.response.SignUserRes;
 import com.atbm.appvppbe.repository.UserRep;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.util.Base64;
 
 @Service
 @RequiredArgsConstructor
@@ -16,7 +23,7 @@ public class UserSer {
     private final UserRep rep;
     private final MailSer mailSer;
 
-    public User signUser(SignUserReq req) throws Exception {
+    public SignUserRes signUser(SignUserReq req) throws Exception {
         // DSA
         DSA dsa = new DSA();
         KeyPair keyPair = dsa.createSignature();
@@ -29,16 +36,15 @@ public class UserSer {
         user.setPublicKey(exportPublicKey);
 
         User saveUser = rep.save(user);
-        if (saveUser.getId() != 0) {
-            // Send Private Key To Mail
-            String email = req.getEmail();
-            String sub = "Welcome To My Shop";
-            String content = "Your Private Key: " + exportPrivateKey;
-            System.out.println(exportPrivateKey);
-//            mailSer.sendMail(email, sub, content);
-        }
 
-        return saveUser;
+        return new SignUserRes(saveUser, exportPrivateKey);
+    }
+
+    public void sendPrivateMail(SendMailReq req) {
+        // Send Private Key To Mail
+        String sub = "Welcome To VPP Shop";
+        String content = "Your Private Key: " + req.getPrivateKey();
+        mailSer.sendMail(req.getEmail(), sub, content);
     }
 
     public User loginUser(LoginUserReq req) {
