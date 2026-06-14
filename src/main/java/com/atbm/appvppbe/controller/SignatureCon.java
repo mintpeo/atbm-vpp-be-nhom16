@@ -1,5 +1,6 @@
 package com.atbm.appvppbe.controller;
 
+import com.atbm.appvppbe.dto.request.CheckSignatureFileReq;
 import com.atbm.appvppbe.dto.request.CheckSignatureReq;
 import com.atbm.appvppbe.dto.request.OrderReq;
 import com.atbm.appvppbe.dto.request.VerifySignReq;
@@ -17,6 +18,11 @@ public class SignatureCon {
     @PostMapping("/verify")
     public boolean verify(@RequestBody VerifySignReq req) throws Exception {
         return ser.verify(req);
+    }
+
+    @PostMapping("/checkFile")
+    public boolean checkSignatureFile(@RequestBody CheckSignatureFileReq req) {
+        return ser.checkSignatureFile(req);
     }
 
     @PostMapping("/check")
