@@ -23,6 +23,28 @@ public class UserSer {
     private final UserRep rep;
     private final MailSer mailSer;
 
+    // Create new user with new key
+    public SignUserRes createUserWithKey(LoginUserReq req) throws Exception {
+        User user = loginUser(req);
+        if (user == null) return null;
+
+        // DSA
+        DSA dsa = new DSA();
+        KeyPair keyPair = dsa.createSignature();
+        String newPubKey = dsa.exportKey(keyPair, true);
+        String newPriKey = dsa.exportKey(keyPair, false);
+
+        // Create new user
+        User newUser = new User();
+        newUser.setEmail(user.getEmail());
+        newUser.setPassword(user.getPassword());
+        newUser.setName(user.getName());
+        newUser.setPublicKey(newPubKey);
+
+        User saveUser = rep.save(newUser);
+        return new SignUserRes(saveUser, newPriKey);
+    }
+
     public SignUserRes signUser(SignUserReq req) throws Exception {
         // DSA
         DSA dsa = new DSA();
@@ -48,7 +70,7 @@ public class UserSer {
     }
 
     public User loginUser(LoginUserReq req) {
-        User user = rep.findByEmail(req.getEmail()).orElse(null);
+        User user = rep.findFirstByEmailOrderByIdDesc(req.getEmail()).orElse(null);
         if (user == null) return null;
         if (user.getPassword().equals(req.getPassword())) return user;
         return null; // wrong pass

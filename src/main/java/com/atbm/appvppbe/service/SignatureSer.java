@@ -31,7 +31,7 @@ public class SignatureSer {
     private final UserRep userRep;
     private final ObjectMapper objectMapper;
 
-    // Verify
+    // Verify (khong su dung)
     public boolean verify(VerifySignReq req) throws Exception {
         Order order = orderRep.findById(req.getOrderId()).orElse(null);
         if (order == null) return false;
@@ -66,7 +66,7 @@ public class SignatureSer {
         return dsa.verify(publicKey, data, signature.getSignature());
     }
 
-    // Signature Again With File
+    // Signature Again With File (khong su dung)
     public boolean checkSignatureFile(CheckSignatureFileReq req) {
         // Check User
         User user = userRep.findById(req.getUserId()).orElse(null);
@@ -133,6 +133,68 @@ public class SignatureSer {
         }
 
         return false;
+    }
+
+    // Signature By Tool
+    public boolean signByTool(SignByToolReq req) throws Exception {
+        // Check User
+        User user = userRep.findById(req.getUserId()).orElse(null);
+        if (user == null) return false;
+
+        // Order
+        Order order = orderRep.findById(req.getOrderId()).orElse(null);
+        if (order == null) return false;
+
+        // Verify
+        DSA dsa = new DSA();
+        PublicKey publicKey = dsa.importPublicKey(user.getPublicKey());
+        boolean verify = dsa.verify(publicKey, req.getOrderText(), req.getSignText());
+        if (verify) {
+            // Verify => True (Order)
+            order.setVerify(true);
+            orderRep.save(order);
+
+            // Save
+            Signature saveSignature = new Signature();
+            saveSignature.setOrder(order);
+            saveSignature.setSignature(req.getSignText());
+            rep.save(saveSignature);
+            return true;
+        }
+        return false;
+    }
+
+    public String handleOrderText(CheckSignatureReq req) {
+        // Check User
+        User user = userRep.findById(req.getUserId()).orElse(null);
+        if (user == null) return null;
+
+        // Order
+        Order order = orderRep.findById(req.getOrderId()).orElse(null);
+        if (order == null) return null;
+
+        // Order Item
+        List<OrderItem> orderItem = orderItemRep.findByOrderId(order.getId());
+        List<OrderItemReq> orderItemReqs = new ArrayList<>();
+        for (OrderItem o : orderItem) {
+            OrderItemReq orderItemReq = new OrderItemReq();
+            orderItemReq.setProductId(o.getProductId());
+            orderItemReq.setType(o.getType());
+            orderItemReq.setPrice(o.getPrice());
+            orderItemReq.setQuantity(o.getQuantity());
+
+            orderItemReqs.add(orderItemReq);
+        }
+
+        // Data to signature
+        SignReq signReq = new SignReq();
+        signReq.setOrderId(req.getOrderId());
+        signReq.setUserId(req.getUserId());
+        signReq.setTotalPrice(order.getTotalPrice());
+        signReq.setItems(orderItemReqs);
+
+        // Object => Json Text
+        return objectMapper.writeValueAsString(signReq);
     }
 
     // Signature Again

@@ -1,9 +1,6 @@
 package com.atbm.appvppbe.controller;
 
-import com.atbm.appvppbe.dto.request.CheckSignatureFileReq;
-import com.atbm.appvppbe.dto.request.CheckSignatureReq;
-import com.atbm.appvppbe.dto.request.OrderReq;
-import com.atbm.appvppbe.dto.request.VerifySignReq;
+import com.atbm.appvppbe.dto.request.*;
 import com.atbm.appvppbe.service.SignatureSer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +11,16 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class SignatureCon {
     private final SignatureSer ser;
+
+    @PostMapping("/tool")
+    public boolean signByTool(@RequestBody SignByToolReq req) throws Exception {
+        return ser.signByTool(req);
+    }
+
+    @PostMapping("/orderText")
+    public String handleOrderText(@RequestBody CheckSignatureReq req) {
+        return ser.handleOrderText(req);
+    }
 
     @PostMapping("/verify")
     public boolean verify(@RequestBody VerifySignReq req) throws Exception {

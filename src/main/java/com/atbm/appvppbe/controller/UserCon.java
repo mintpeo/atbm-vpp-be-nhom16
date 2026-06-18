@@ -16,6 +16,11 @@ import org.springframework.web.bind.annotation.*;
 public class UserCon {
     private final UserSer ser;
 
+    @PostMapping("/create")
+    public SignUserRes create(@RequestBody LoginUserReq req) throws Exception {
+        return ser.createUserWithKey(req);
+    }
+
     @PostMapping("/sign")
     public SignUserRes signUser(@RequestBody SignUserReq req) throws Exception {
         return ser.signUser(req);
